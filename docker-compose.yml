@@ -26,20 +26,41 @@ services:
 
   ollama:
     image: ollama/ollama:latest
+    container_name: ollama
+
     ports:
       - "11434:11434"
+
     volumes:
       - ollama_data:/root/.ollama
       - ./scripts/ollama-entrypoint.sh:/entrypoint.sh:ro
+
     env_file:
       - .env
+
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
+
+    # 👇 זה החלק הקריטי ל-GPU
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+    # 👇 זה חשוב מאוד (compose v2)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 15s
       timeout: 10s
       retries: 15
       start_period: 45s
+
     restart: unless-stopped
 
   backend:
