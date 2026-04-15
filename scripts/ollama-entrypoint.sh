@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 
 MODEL="${OLLAMA_MODEL:-llama3}"
 
@@ -6,7 +6,7 @@ MODEL="${OLLAMA_MODEL:-llama3}"
 ollama serve &
 SERVER_PID=$!
 
-# Wait until the server responds — use ollama CLI itself, no curl needed
+# Wait until the server responds â€” use ollama CLI itself, no curl needed
 echo "Waiting for Ollama to start..."
 until ollama list > /dev/null 2>&1; do
   sleep 2
