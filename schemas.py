@@ -121,3 +121,8 @@ class ServiceStatus(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     services: dict[str, ServiceStatus]
+
+
+
+
+# PR created for audit trail
