@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import ThinkingDots from '../components/ThinkingDots'
 import { streamChatMessage } from '../api/client'
 
 export default function ChatPage({
@@ -109,9 +110,9 @@ export default function ChatPage({
             </span>
             <div className="message-bubble">
               {msg.role === 'assistant' ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.content || (loading && i === messages.length - 1 ? '_Thinking…_' : '')}
-                </ReactMarkdown>
+                msg.content === '' && loading && i === messages.length - 1
+                  ? <ThinkingDots label="Thinking" />
+                  : <div className="md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
               ) : (
                 msg.content
               )}

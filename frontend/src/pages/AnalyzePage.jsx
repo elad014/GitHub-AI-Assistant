@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import ThinkingDots from '../components/ThinkingDots'
 import { analyzeRepo } from '../api/client'
 
 export default function AnalyzePage() {
@@ -38,9 +41,15 @@ export default function AnalyzePage() {
           required
         />
         <button className="btn" type="submit" disabled={loading}>
-          {loading ? 'Analyzing...' : 'Analyze'}
+          {loading ? <ThinkingDots label="Analyzing" /> : 'Analyze'}
         </button>
       </form>
+
+      {loading && (
+        <div className="analyze-loading">
+          <ThinkingDots label="Analyzing repository" />
+        </div>
+      )}
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -65,7 +74,11 @@ export default function AnalyzePage() {
 
             <div className="result-section">
               <h3>AI Summary</h3>
-              <pre>{result.summary}</pre>
+              <div className="md">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {result.summary}
+                </ReactMarkdown>
+              </div>
             </div>
 
             {result.key_files.length > 0 && (
