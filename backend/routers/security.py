@@ -35,13 +35,13 @@ async def security_scan(request: SecurityScanRequest) -> SecurityScanResponse:
     timestamp = datetime.now(timezone.utc)
     repo_url_str = str(request.repo_url)
 
-    await emit_security_scan(repo_url_str, finding_count, has_high, settings.ollama_model)
+    await emit_security_scan(repo_url_str, finding_count, has_high, settings.anthropic_model)
     await log_security_scan(
         repo_url=repo_url_str,
         findings_raw=findings_raw,
         finding_count=finding_count,
         has_high=has_high,
-        model_name=settings.ollama_model,
+        model_name=settings.anthropic_model,
     )
 
     return SecurityScanResponse(
@@ -75,7 +75,7 @@ async def analyze_code(request: AnalyzeCodeRequest) -> AnalyzeCodeResponse:
         event_type="code_explain",
         repo_url=repo_url_str,
         ai_response=explanation,
-        model_name=settings.ollama_model,
+        model_name=settings.anthropic_model,
         user_message=request.file_path,
     )
 

@@ -28,12 +28,12 @@ async def _run_analysis(request: AnalyzeRequest) -> AnalyzeResponse:
     timestamp = datetime.now(timezone.utc)
     repo_url_str = str(request.repo_url)
 
-    await emit_repo_analysis(repo_url_str, summary, settings.ollama_model)
+    await emit_repo_analysis(repo_url_str, summary, settings.anthropic_model)
     await log_event(
         event_type="analyze",
         repo_url=repo_url_str,
         ai_response=summary,
-        model_name=settings.ollama_model,
+        model_name=settings.anthropic_model,
     )
 
     return AnalyzeResponse(
