@@ -1,16 +1,13 @@
+import json
 import logging
 import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
-import anthropic
+import httpx
 
 from config import settings
 
 logger = logging.getLogger(__name__)
-
-_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-# ── Prompt templates ────────────────────────────────────────────────────────
 
 _QUERY_TEMPLATE = """\
 You are a code assistant. Answer the developer's question using ONLY the repository context below. Do not use external knowledge or invent information not present in the context. If the context does not contain enough information to answer, say so.
@@ -109,8 +106,6 @@ Rules:
 Assistant:"""
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
 def _format_history(history: list[dict]) -> str:
     if not history:
         return ""
@@ -121,28 +116,44 @@ def _format_history(history: list[dict]) -> str:
     return "Previous conversation:\n" + "\n".join(lines) + "\n\n"
 
 
-# ── Internal generators ──────────────────────────────────────────────────────
-
 async def _generate(prompt: str, num_ctx: int = 4096) -> str:
-    message = await _client.messages.create(
-        model=settings.anthropic_model,
-        max_tokens=num_ctx,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return next((b.text for b in message.content if b.type == "text"), "No response received from model.")
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(
+            f"{settings.ollama_base_url}/api/generate",
+            json={
+                "model": settings.ollama_model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"num_ctx": num_ctx},
+            },
+        )
+        response.raise_for_status()
+        data: dict = response.json()
+    return data.get("response", "").strip() or "No response received from model."
 
 
 async def _stream_generate(prompt: str, num_ctx: int = 4096) -> AsyncGenerator[str, None]:
-    async with _client.messages.stream(
-        model=settings.anthropic_model,
-        max_tokens=num_ctx,
-        messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        async for text in stream.text_stream:
-            yield text
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        async with client.stream(
+            "POST",
+            f"{settings.ollama_base_url}/api/generate",
+            json={
+                "model": settings.ollama_model,
+                "prompt": prompt,
+                "stream": True,
+                "options": {"num_ctx": num_ctx},
+            },
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                data: dict = json.loads(line)
+                if token := data.get("response"):
+                    yield token
+                if data.get("done"):
+                    return
 
-
-# ── Public API — legacy (analyze / security) ─────────────────────────────────
 
 async def ask_ollama(context: str, question: str) -> str:
     return await _generate(_QUERY_TEMPLATE.format(context=context, question=question))
@@ -181,8 +192,6 @@ async def stream_chat_ollama(
         yield token
 
 
-# ── Public API — agentic tool-use loop ───────────────────────────────────────
-
 async def agentic_chat(
     general_context: str,
     message: str,
@@ -203,7 +212,6 @@ async def agentic_chat(
         message=message,
     )
 
-    # Text accumulated after the initial prompt (tool calls + file content blocks)
     accumulated = ""
 
     for call_idx in range(max_tool_calls):
@@ -224,7 +232,6 @@ async def agentic_chat(
             f"[End File]\n\n"
         )
 
-    # Exhausted tool calls — generate final answer with all fetched context
     logger.debug("[Agent] Exhausted tool calls, generating final answer")
     return await _generate(base_prompt + accumulated, num_ctx=8192)
 
@@ -240,8 +247,6 @@ async def stream_agentic_chat(
     Streaming version of the agentic loop.
     Yields dicts:  {"token": str}  for answer tokens
                    {"status": str} for tool-use progress updates
-    Tool-use rounds run non-streaming so the full response can be inspected;
-    the final answer is streamed token by token.
     """
     base_prompt = _AGENTIC_TEMPLATE.format(
         max_calls=max_tool_calls,
@@ -258,7 +263,6 @@ async def stream_agentic_chat(
 
         match = re.match(r"^\s*FETCH_FILE\(([^)]+)\)\s*$", response, re.IGNORECASE)
         if not match:
-            # LLM gave a direct answer — yield it as a single token chunk
             yield {"token": response}
             return
 
@@ -273,19 +277,15 @@ async def stream_agentic_chat(
             f"[End File]\n\n"
         )
 
-    # Stream the final answer after all tool calls
     logger.debug("[Agent] Streaming final answer after tool calls")
     async for token in _stream_generate(base_prompt + accumulated, num_ctx=8192):
         yield {"token": token}
 
 
 async def check_connection() -> bool:
-    try:
-        await _client.messages.create(
-            model=settings.anthropic_model,
-            max_tokens=10,
-            messages=[{"role": "user", "content": "hi"}],
-        )
-        return True
-    except Exception:
-        return False
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            resp = await client.get(f"{settings.ollama_base_url}/api/tags")
+            return resp.status_code == 200
+        except Exception:
+            return False

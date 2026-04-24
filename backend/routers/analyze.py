@@ -6,6 +6,7 @@ from config import settings
 from models.schemas import AnalyzeRequest, AnalyzeResponse
 from services.db_service import log_event
 from services.github_service import build_context, fetch_repo_info
+from services.kafka_service import emit_repo_analysis
 from services.ollama_service import summarize_repo
 
 router = APIRouter()
@@ -27,12 +28,13 @@ async def _run_analysis(request: AnalyzeRequest) -> AnalyzeResponse:
     timestamp = datetime.now(timezone.utc)
     repo_url_str = str(request.repo_url)
 
+    await emit_repo_analysis(repo_url_str, summary, settings.ollama_model)
     await log_event(
         event_type="analyze",
         repo_url=repo_url_str,
         user_message="Analyze",
         ai_response=summary,
-        model_name=settings.anthropic_model,
+        model_name=settings.ollama_model,
     )
 
     return AnalyzeResponse(
