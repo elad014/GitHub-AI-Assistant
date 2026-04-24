@@ -21,6 +21,10 @@ export default function ChatPage({
 
   function loadRepo(e) {
     e.preventDefault()
+    if (!userName.trim()) {
+      setError('Please enter your name before loading a repository.')
+      return
+    }
     const trimmed = repoUrl.trim()
     if (!trimmed) return
     setActiveRepo(trimmed)
@@ -83,7 +87,7 @@ export default function ChatPage({
           onChange={(e) => setRepoUrl(e.target.value)}
           required
         />
-        <button className="btn btn-secondary" type="submit">
+        <button className="btn btn-secondary" type="submit" disabled={!userName.trim()}>
           Load repo
         </button>
       </form>
