@@ -33,7 +33,7 @@ async def _resolve_history(request: ChatRequest, repo_url_str: str) -> list[dict
 async def chat(request: ChatRequest) -> ChatResponse:
     repo_url_str = str(request.repo_url)
 
-    await emit_chat_request(repo_url_str, request.message, settings.ollama_model)
+    await emit_chat_request(repo_url_str, request.message, settings.anthropic_model)
 
     try:
         info = await fetch_repo_overview(request.repo_url)
@@ -57,11 +57,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
         event_type="chat",
         repo_url=repo_url_str,
         ai_response=reply,
-        model_name=settings.ollama_model,
+        model_name=settings.anthropic_model,
         user_message=request.message,
         user_name=request.user_name or None,
     )
-    await emit_chat_response(repo_url_str, request.message, reply, settings.ollama_model)
+    await emit_chat_response(repo_url_str, request.message, reply, settings.anthropic_model)
 
     return ChatResponse(message=reply, timestamp=timestamp)
 
@@ -70,7 +70,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
     repo_url_str = str(request.repo_url)
 
-    await emit_chat_request(repo_url_str, request.message, settings.ollama_model)
+    await emit_chat_request(repo_url_str, request.message, settings.anthropic_model)
 
     try:
         info = await fetch_repo_overview(request.repo_url)
@@ -106,11 +106,11 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 event_type="chat",
                 repo_url=repo_url_str,
                 ai_response=full_reply,
-                model_name=settings.ollama_model,
+                model_name=settings.anthropic_model,
                 user_message=request.message,
                 user_name=request.user_name or None,
             )
-            await emit_chat_response(repo_url_str, request.message, full_reply, settings.ollama_model)
+            await emit_chat_response(repo_url_str, request.message, full_reply, settings.anthropic_model)
         except Exception:
             pass
 

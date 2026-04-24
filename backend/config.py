@@ -3,8 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     github_token: str = ""
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3"
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-6"
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_topic: str = "ai-events"
     database_url: str = ""
