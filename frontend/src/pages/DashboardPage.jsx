@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAnalytics } from '../api/client'
+import ThinkingDots from '../components/ThinkingDots'
 
 const PERIODS = [7, 30, 90]
 
@@ -71,7 +72,12 @@ export default function DashboardPage() {
 
       {error && <div className="error-banner">{error}</div>}
 
-      {loading && <p className="status-text">Loading analytics...</p>}
+      {loading && (
+        <div className="analyze-loading">
+          <span className="spinner spinner--lg" aria-hidden="true" />
+          <ThinkingDots label="Loading analytics" spinner={false} />
+        </div>
+      )}
 
       {!loading && data && (
         <>

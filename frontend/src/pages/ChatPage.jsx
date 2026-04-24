@@ -111,7 +111,7 @@ export default function ChatPage({
             <div className="message-bubble">
               {msg.role === 'assistant' ? (
                 msg.content === '' && loading && i === messages.length - 1
-                  ? <ThinkingDots label="Thinking" />
+                  ? <ThinkingDots label="Thinking" spinner />
                   : <div className="md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
               ) : (
                 msg.content

@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 
 const DOTS = ['', '.', '..', '...']
 
-export default function ThinkingDots({ label = 'Thinking' }) {
+/**
+ * @param {{ label?: string, spinner?: boolean }} props
+ * @returns {JSX.Element}
+ */
+export default function ThinkingDots({ label = 'Thinking', spinner = false }) {
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -12,6 +16,7 @@ export default function ThinkingDots({ label = 'Thinking' }) {
 
   return (
     <span className="thinking-dots">
+      {spinner && <span className="spinner" aria-hidden="true" />}
       {label}
       <span className="thinking-dots-trail">{DOTS[tick]}</span>
     </span>

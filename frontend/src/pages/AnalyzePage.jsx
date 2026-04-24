@@ -41,12 +41,13 @@ export default function AnalyzePage() {
           required
         />
         <button className="btn" type="submit" disabled={loading}>
-          {loading ? <ThinkingDots label="Analyzing" /> : 'Analyze'}
+          {loading ? <ThinkingDots label="Analyzing" spinner /> : 'Analyze'}
         </button>
       </form>
 
       {loading && (
         <div className="analyze-loading">
+          <span className="spinner spinner--lg" aria-hidden="true" />
           <ThinkingDots label="Analyzing repository" />
         </div>
       )}

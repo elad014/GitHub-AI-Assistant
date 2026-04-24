@@ -361,8 +361,36 @@ body {
   margin: 0.75rem 0;
 }
 
+/* ── Spinner ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinner--lg {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
 /* ── Thinking animation ── */
-.thinking-dots { color: var(--text-muted); font-style: italic; }
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
 .thinking-dots-trail {
   display: inline-block;
   width: 1.6ch;
@@ -371,8 +399,11 @@ body {
 
 /* ── Analyze loading indicator ── */
 .analyze-loading {
-  margin-top: 1.5rem;
-  text-align: center;
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
   font-size: 0.95rem;
 }
 
