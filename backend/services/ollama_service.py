@@ -1,13 +1,14 @@
-import json
 import logging
 import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
-import httpx
+import anthropic
 
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 # ── Prompt templates ────────────────────────────────────────────────────────
 
@@ -123,42 +124,22 @@ def _format_history(history: list[dict]) -> str:
 # ── Internal generators ──────────────────────────────────────────────────────
 
 async def _generate(prompt: str, num_ctx: int = 4096) -> str:
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        response = await client.post(
-            f"{settings.ollama_base_url}/api/generate",
-            json={
-                "model": settings.ollama_model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"num_ctx": num_ctx},
-            },
-        )
-        response.raise_for_status()
-        data: dict = response.json()
-    return data.get("response", "").strip() or "No response received from model."
+    message = await _client.messages.create(
+        model=settings.anthropic_model,
+        max_tokens=num_ctx,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return next((b.text for b in message.content if b.type == "text"), "No response received from model.")
 
 
 async def _stream_generate(prompt: str, num_ctx: int = 4096) -> AsyncGenerator[str, None]:
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        async with client.stream(
-            "POST",
-            f"{settings.ollama_base_url}/api/generate",
-            json={
-                "model": settings.ollama_model,
-                "prompt": prompt,
-                "stream": True,
-                "options": {"num_ctx": num_ctx},
-            },
-        ) as response:
-            response.raise_for_status()
-            async for line in response.aiter_lines():
-                if not line:
-                    continue
-                data: dict = json.loads(line)
-                if token := data.get("response"):
-                    yield token
-                if data.get("done"):
-                    return
+    async with _client.messages.stream(
+        model=settings.anthropic_model,
+        max_tokens=num_ctx,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        async for text in stream.text_stream:
+            yield text
 
 
 # ── Public API — legacy (analyze / security) ─────────────────────────────────
@@ -299,9 +280,12 @@ async def stream_agentic_chat(
 
 
 async def check_connection() -> bool:
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            resp = await client.get(f"{settings.ollama_base_url}/api/tags")
-            return resp.status_code == 200
-        except Exception:
-            return False
+    try:
+        await _client.messages.create(
+            model=settings.anthropic_model,
+            max_tokens=10,
+            messages=[{"role": "user", "content": "hi"}],
+        )
+        return True
+    except Exception:
+        return False
