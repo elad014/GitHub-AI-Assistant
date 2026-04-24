@@ -23,6 +23,10 @@ export default function ChatPage({
     e.preventDefault()
     const trimmed = repoUrl.trim()
     if (!trimmed) return
+    if (!userName.trim()) {
+      setError('Please enter your name before loading a repository.')
+      return
+    }
     setActiveRepo(trimmed)
     setMessages([])
     setError('')
@@ -74,6 +78,7 @@ export default function ChatPage({
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
           aria-label="Your name"
+          required
         />
         <input
           className="input-url"
