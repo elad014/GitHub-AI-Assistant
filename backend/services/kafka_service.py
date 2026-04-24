@@ -51,10 +51,29 @@ async def _retry_loop() -> None:
     )
 
 
+def _is_local_hostname(bootstrap_servers: str) -> bool:
+    """Return True when every host in the bootstrap list is a bare Docker-compose
+    service name (no dots) that will never resolve outside of a Docker network."""
+    for server in bootstrap_servers.split(","):
+        host = server.strip().split(":")[0]
+        if "." in host or host in ("localhost", "127.0.0.1", "::1"):
+            return False
+    return True
+
+
 async def init_kafka() -> None:
     global _retry_task
     if not settings.kafka_bootstrap_servers:
         logger.info("KAFKA_BOOTSTRAP_SERVERS not set — Kafka disabled")
+        return
+    if _is_local_hostname(settings.kafka_bootstrap_servers):
+        logger.warning(
+            "KAFKA_BOOTSTRAP_SERVERS=%r looks like a Docker-internal hostname. "
+            "Kafka is disabled in this environment. "
+            "Set KAFKA_BOOTSTRAP_SERVERS to an external broker (e.g. Upstash, Confluent Cloud) "
+            "or leave it empty to silence this warning.",
+            settings.kafka_bootstrap_servers,
+        )
         return
     connected = await _connect()
     if not connected:
