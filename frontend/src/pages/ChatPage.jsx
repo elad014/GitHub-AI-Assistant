@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
 import { streamChatMessage } from '../api/client'
+import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
 
 export default function ChatPage({
   repoUrl, setRepoUrl,
@@ -25,6 +26,10 @@ export default function ChatPage({
     if (!trimmed) return
     if (!userName.trim()) {
       setError('Please enter your name before loading a repository.')
+      return
+    }
+    if (!isValidGitHubUrl(trimmed)) {
+      setError('Please enter a valid GitHub repository URL (e.g. https://github.com/owner/repo).')
       return
     }
     setActiveRepo(trimmed)
