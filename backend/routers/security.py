@@ -7,7 +7,6 @@ from config import settings
 from models.schemas import AnalyzeCodeRequest, AnalyzeCodeResponse, SecurityScanRequest, SecurityScanResponse
 from services.db_service import log_event, log_security_scan
 from services.github_service import build_context, fetch_repo_info
-from services.kafka_service import emit_security_scan
 from services.ollama_service import explain_code, scan_security
 
 router = APIRouter()
@@ -35,7 +34,6 @@ async def security_scan(request: SecurityScanRequest) -> SecurityScanResponse:
     timestamp = datetime.now(timezone.utc)
     repo_url_str = str(request.repo_url)
 
-    await emit_security_scan(repo_url_str, finding_count, has_high, settings.anthropic_model)
     await log_security_scan(
         repo_url=repo_url_str,
         findings_raw=findings_raw,

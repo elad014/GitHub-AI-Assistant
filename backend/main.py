@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 
 from routers import analyze, analytics, chat, health, query, security
 from services.db_service import close_db, init_db
-from services.kafka_service import close_kafka, init_kafka
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,9 +21,7 @@ logging.getLogger("services.github_service").setLevel(logging.DEBUG)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
-    await init_kafka()
     yield
-    await close_kafka()
     await close_db()
 
 

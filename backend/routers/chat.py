@@ -9,7 +9,6 @@ from config import settings
 from models.schemas import ChatRequest, ChatResponse
 from services.db_service import get_user_chat_history, log_event
 from services.github_service import build_general_context, fetch_repo_overview, fetch_single_file
-from services.kafka_service import emit_chat_request, emit_chat_response
 from services.ollama_service import agentic_chat, stream_agentic_chat
 
 router = APIRouter()
@@ -32,8 +31,6 @@ async def _resolve_history(request: ChatRequest, repo_url_str: str) -> list[dict
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     repo_url_str = str(request.repo_url)
-
-    await emit_chat_request(repo_url_str, request.message, settings.anthropic_model)
 
     try:
         info = await fetch_repo_overview(request.repo_url)
@@ -61,7 +58,6 @@ async def chat(request: ChatRequest) -> ChatResponse:
         user_message=request.message,
         user_name=request.user_name or None,
     )
-    await emit_chat_response(repo_url_str, request.message, reply, settings.anthropic_model)
 
     return ChatResponse(message=reply, timestamp=timestamp)
 
@@ -69,8 +65,6 @@ async def chat(request: ChatRequest) -> ChatResponse:
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
     repo_url_str = str(request.repo_url)
-
-    await emit_chat_request(repo_url_str, request.message, settings.anthropic_model)
 
     try:
         info = await fetch_repo_overview(request.repo_url)
@@ -110,7 +104,6 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 user_message=request.message,
                 user_name=request.user_name or None,
             )
-            await emit_chat_response(repo_url_str, request.message, full_reply, settings.anthropic_model)
         except Exception:
             pass
 

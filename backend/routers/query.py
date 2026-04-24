@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import QueryRequest, QueryResponse
 from services.db_service import save_interaction
 from services.github_service import build_general_context, fetch_repo_overview, fetch_single_file
-from services.kafka_service import publish_interaction
 from services.ollama_service import agentic_chat
 
 router = APIRouter()
@@ -31,14 +30,6 @@ async def query_repo(request: QueryRequest) -> QueryResponse:
     timestamp = datetime.now(timezone.utc)
     repo_url_str = str(request.repo_url)
 
-    record: dict = {
-        "repo_url": repo_url_str,
-        "question": request.question,
-        "answer": answer,
-        "timestamp": timestamp.isoformat(),
-    }
-
-    await publish_interaction(record)
     await save_interaction(repo_url_str, request.question, answer)
 
     return QueryResponse(

@@ -4,7 +4,6 @@ import { checkHealth } from '../api/client'
 const POLL_INTERVAL_MS = 30_000
 
 const SERVICE_LINKS = {
-  kafka:    'http://localhost:8080',
   database: 'https://console.neon.tech',
 }
 

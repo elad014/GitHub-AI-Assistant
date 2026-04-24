@@ -14,7 +14,5 @@ services:
         sync: false
       - key: GITHUB_TOKEN
         sync: false
-      - key: KAFKA_TOPIC
-        value: ai-events
       - key: CHAT_HISTORY_SIZE
         value: "10"
