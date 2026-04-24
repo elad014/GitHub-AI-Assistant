@@ -44,6 +44,7 @@ services:
       retries: 12
       start_period: 20s
 
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:
@@ -60,7 +61,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
