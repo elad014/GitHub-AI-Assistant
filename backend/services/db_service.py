@@ -1,12 +1,8 @@
-import asyncio
 import logging
-import time
-from typing import Any
 
 import asyncpg
 
 from config import settings
-from trace_context import request_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -66,28 +62,6 @@ _MIGRATIONS = [
         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     """,
-    # Request tracing table
-    """
-    CREATE TABLE IF NOT EXISTS trace_request (
-        id             SERIAL PRIMARY KEY,
-        request_id     TEXT        NOT NULL,
-        direction      TEXT        NOT NULL,
-        operation      TEXT,
-        status_code    INT,
-        elapsed_ms     INT,
-        prompt_chars   INT,
-        response_chars INT,
-        input_tokens   INT,
-        output_tokens  INT,
-        rows_affected  INT,
-        metadata       JSONB,
-        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS idx_trace_request_id ON trace_request (request_id);
-    CREATE INDEX IF NOT EXISTS idx_trace_created_at ON trace_request (created_at DESC);
-    """,
 ]
 
 
@@ -114,49 +88,6 @@ async def close_db() -> None:
         _pool = None
 
 
-async def write_trace(
-    direction: str,
-    operation: str | None = None,
-    status_code: int | None = None,
-    elapsed_ms: int | None = None,
-    prompt_chars: int | None = None,
-    response_chars: int | None = None,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    rows_affected: int | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> None:
-    """Insert one trace hop row. Fire-and-forget — never raises."""
-    if _pool is None:
-        return
-    import json
-    request_id = request_id_var.get()
-    try:
-        async with _pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO trace_request
-                    (request_id, direction, operation, status_code, elapsed_ms,
-                     prompt_chars, response_chars, input_tokens, output_tokens,
-                     rows_affected, metadata)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-                """,
-                request_id,
-                direction,
-                operation,
-                status_code,
-                elapsed_ms,
-                prompt_chars,
-                response_chars,
-                input_tokens,
-                output_tokens,
-                rows_affected,
-                json.dumps(metadata) if metadata else None,
-            )
-    except Exception as exc:
-        logger.debug("write_trace failed (non-fatal): %s", exc)
-
-
 async def get_user_chat_history(
     user_name: str,
     repo_url: str,
@@ -165,10 +96,6 @@ async def get_user_chat_history(
     """Return last `limit` Q&A pairs for this user+repo, chronological (oldest first)."""
     if _pool is None or not user_name:
         return []
-    operation = "get_user_chat_history"
-    logger.debug("DB query: %s  limit=%d", operation, limit)
-    await write_trace(direction="server->db", operation=operation)
-    t0 = time.monotonic()
     async with _pool.acquire() as conn:
         rows = await conn.fetch(
             """
@@ -183,9 +110,6 @@ async def get_user_chat_history(
             repo_url,
             limit,
         )
-    elapsed_ms = int((time.monotonic() - t0) * 1000)
-    logger.debug("DB result: %d rows  elapsed=%dms", len(rows), elapsed_ms)
-    await write_trace(direction="db->server", operation=operation, rows_affected=len(rows), elapsed_ms=elapsed_ms)
     # Reverse so oldest first for model context
     out: list[dict[str, str]] = []
     for r in reversed(rows):
@@ -206,10 +130,6 @@ async def log_event(
     if _pool is None:
         logger.warning("Chat not recorded: database not connected (set DATABASE_URL)")
         return
-    operation = f"log_event:{event_type}"
-    logger.debug("DB query: %s", operation)
-    await write_trace(direction="server->db", operation=operation)
-    t0 = time.monotonic()
     async with _pool.acquire() as conn:
         await conn.execute(
             """
@@ -223,9 +143,6 @@ async def log_event(
             ai_response,
             model_name,
         )
-    elapsed_ms = int((time.monotonic() - t0) * 1000)
-    logger.debug("DB result: 1 row inserted  elapsed=%dms", elapsed_ms)
-    await write_trace(direction="db->server", operation=operation, rows_affected=1, elapsed_ms=elapsed_ms)
 
 
 async def log_security_scan(
@@ -237,10 +154,6 @@ async def log_security_scan(
 ) -> None:
     if _pool is None:
         return
-    operation = "log_security_scan"
-    logger.debug("DB query: %s", operation)
-    await write_trace(direction="server->db", operation=operation)
-    t0 = time.monotonic()
     async with _pool.acquire() as conn:
         await conn.execute(
             """
@@ -253,9 +166,6 @@ async def log_security_scan(
             has_high,
             model_name,
         )
-    elapsed_ms = int((time.monotonic() - t0) * 1000)
-    logger.debug("DB result: 1 row inserted  elapsed=%dms", elapsed_ms)
-    await write_trace(direction="db->server", operation=operation, rows_affected=1, elapsed_ms=elapsed_ms)
 
 
 async def get_analytics(period_days: int = 30) -> dict:
