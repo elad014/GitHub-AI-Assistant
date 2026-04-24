@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import QueryRequest, QueryResponse
 from services.db_service import save_interaction
 from services.github_service import build_general_context, fetch_repo_overview, fetch_single_file
-from services.ollama_service import agentic_chat
+from services.ai_service import agentic_chat
 
 router = APIRouter()
 

@@ -7,7 +7,7 @@ from config import settings
 from models.schemas import AnalyzeCodeRequest, AnalyzeCodeResponse, SecurityScanRequest, SecurityScanResponse
 from services.db_service import log_event, log_security_scan
 from services.github_service import build_context, fetch_repo_info
-from services.ollama_service import explain_code, scan_security
+from services.ai_service import explain_code, scan_security
 
 router = APIRouter()
 

@@ -142,20 +142,7 @@ async def _stream_generate(prompt: str, num_ctx: int = 4096) -> AsyncGenerator[s
             yield text
 
 
-# ── Public API — legacy (analyze / security) ─────────────────────────────────
-
-async def ask_ollama(context: str, question: str) -> str:
-    return await _generate(_QUERY_TEMPLATE.format(context=context, question=question))
-
-
-async def chat_ollama(context: str, message: str, history: list[dict]) -> str:
-    prompt = _CHAT_TEMPLATE.format(
-        context=context,
-        history=_format_history(history),
-        message=message,
-    )
-    return await _generate(prompt)
-
+# ── Public API ────────────────────────────────────────────────────────────────
 
 async def summarize_repo(context: str) -> str:
     return await _generate(_ANALYZE_TEMPLATE.format(context=context))
@@ -168,20 +155,6 @@ async def scan_security(context: str) -> str:
 async def explain_code(context: str, file_path: str) -> str:
     return await _generate(_EXPLAIN_TEMPLATE.format(context=context, file_path=file_path))
 
-
-async def stream_chat_ollama(
-    context: str, message: str, history: list[dict]
-) -> AsyncGenerator[str, None]:
-    prompt = _CHAT_TEMPLATE.format(
-        context=context,
-        history=_format_history(history),
-        message=message,
-    )
-    async for token in _stream_generate(prompt):
-        yield token
-
-
-# ── Public API — agentic tool-use loop ───────────────────────────────────────
 
 async def agentic_chat(
     general_context: str,
@@ -203,7 +176,6 @@ async def agentic_chat(
         message=message,
     )
 
-    # Text accumulated after the initial prompt (tool calls + file content blocks)
     accumulated = ""
 
     for call_idx in range(max_tool_calls):
@@ -224,7 +196,6 @@ async def agentic_chat(
             f"[End File]\n\n"
         )
 
-    # Exhausted tool calls — generate final answer with all fetched context
     logger.debug("[Agent] Exhausted tool calls, generating final answer")
     return await _generate(base_prompt + accumulated, num_ctx=8192)
 
@@ -258,7 +229,6 @@ async def stream_agentic_chat(
 
         match = re.match(r"^\s*FETCH_FILE\(([^)]+)\)\s*$", response, re.IGNORECASE)
         if not match:
-            # LLM gave a direct answer — yield it as a single token chunk
             yield {"token": response}
             return
 
@@ -273,7 +243,6 @@ async def stream_agentic_chat(
             f"[End File]\n\n"
         )
 
-    # Stream the final answer after all tool calls
     logger.debug("[Agent] Streaming final answer after tool calls")
     async for token in _stream_generate(base_prompt + accumulated, num_ctx=8192):
         yield {"token": token}

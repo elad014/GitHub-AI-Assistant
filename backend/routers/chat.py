@@ -9,7 +9,7 @@ from config import settings
 from models.schemas import ChatRequest, ChatResponse
 from services.db_service import get_user_chat_history, log_event
 from services.github_service import build_general_context, fetch_repo_overview, fetch_single_file
-from services.ollama_service import agentic_chat, stream_agentic_chat
+from services.ai_service import agentic_chat, stream_agentic_chat
 
 router = APIRouter()
 

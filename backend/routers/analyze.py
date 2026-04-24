@@ -6,7 +6,7 @@ from config import settings
 from models.schemas import AnalyzeRequest, AnalyzeResponse
 from services.db_service import log_event
 from services.github_service import build_context, fetch_repo_info
-from services.ollama_service import summarize_repo
+from services.ai_service import summarize_repo
 
 router = APIRouter()
 
