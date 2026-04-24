@@ -30,26 +30,39 @@ async def _connect() -> bool:
         return False
 
 
+_MAX_RETRIES = 5
+
+
 async def _retry_loop() -> None:
     delay = 5
-    while True:
+    for attempt in range(1, _MAX_RETRIES + 1):
         await asyncio.sleep(delay)
         if _producer is not None:
             return
-        logger.info("Retrying Kafka connection...")
+        logger.info("Retrying Kafka connection (attempt %d/%d)...", attempt, _MAX_RETRIES)
         if await _connect():
             return
         delay = min(delay * 2, 60)
+    logger.warning(
+        "Kafka unreachable after %d attempts — event streaming disabled. "
+        "To enable Kafka set KAFKA_BOOTSTRAP_SERVERS to an external broker "
+        "(e.g. Upstash, Confluent Cloud), or leave it empty to disable Kafka.",
+        _MAX_RETRIES,
+    )
 
 
 async def init_kafka() -> None:
     global _retry_task
     if not settings.kafka_bootstrap_servers:
-        logger.info("KAFKA_BOOTSTRAP_SERVERS not configured — Kafka disabled")
+        logger.info("KAFKA_BOOTSTRAP_SERVERS not set — Kafka disabled")
         return
     connected = await _connect()
     if not connected:
-        logger.warning("Kafka not available at startup — will retry in background")
+        logger.warning(
+            "Kafka not available at startup (bootstrap: %s) — will retry %d times in background",
+            settings.kafka_bootstrap_servers,
+            _MAX_RETRIES,
+        )
         _retry_task = asyncio.create_task(_retry_loop())
 
 

@@ -77,6 +77,16 @@ body {
   background: var(--error);
 }
 
+.health-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.health-link:hover {
+  color: var(--accent);
+}
+
 .navbar-brand {
   font-weight: 700;
   font-size: 1rem;

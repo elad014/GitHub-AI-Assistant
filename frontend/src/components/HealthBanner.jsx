@@ -3,6 +3,11 @@ import { checkHealth } from '../api/client'
 
 const POLL_INTERVAL_MS = 30_000
 
+const SERVICE_LINKS = {
+  kafka:    'http://localhost:8080',
+  database: 'https://console.neon.tech',
+}
+
 /**
  * @param {{ status: string }} service
  */
@@ -40,7 +45,10 @@ export default function HealthBanner() {
       {Object.entries(services).map(([name, svc]) => (
         <span key={name} className="health-item">
           <Dot status={svc.status} />
-          {name}
+          {SERVICE_LINKS[name]
+            ? <a href={SERVICE_LINKS[name]} target="_blank" rel="noopener noreferrer" className="health-link">{name}</a>
+            : name
+          }
         </span>
       ))}
     </div>

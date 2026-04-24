@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from config import settings
 from models.schemas import HealthResponse, ServiceStatus
 from services.db_service import check_connection as db_check
 from services.kafka_service import is_connected as kafka_check
@@ -15,7 +16,7 @@ async def health_check() -> HealthResponse:
     db_ok = await db_check()
 
     services: dict[str, ServiceStatus] = {
-        "ollama": ServiceStatus(status="ok" if ollama_ok else "error"),
+        settings.anthropic_model: ServiceStatus(status="ok" if ollama_ok else "error"),
         "kafka": ServiceStatus(status="ok" if kafka_ok else "error"),
         "database": ServiceStatus(status="ok" if db_ok else "error"),
     }
