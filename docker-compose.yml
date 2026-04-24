@@ -44,6 +44,7 @@ services:
       retries: 12
       start_period: 20s
 
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:
