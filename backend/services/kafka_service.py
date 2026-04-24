@@ -44,6 +44,9 @@ async def _retry_loop() -> None:
 
 async def init_kafka() -> None:
     global _retry_task
+    if not settings.kafka_bootstrap_servers:
+        logger.info("KAFKA_BOOTSTRAP_SERVERS not configured — Kafka disabled")
+        return
     connected = await _connect()
     if not connected:
         logger.warning("Kafka not available at startup — will retry in background")
