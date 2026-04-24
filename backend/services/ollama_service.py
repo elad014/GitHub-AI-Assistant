@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
 import anthropic
@@ -124,22 +125,91 @@ def _format_history(history: list[dict]) -> str:
 # ── Internal generators ──────────────────────────────────────────────────────
 
 async def _generate(prompt: str, num_ctx: int = 4096) -> str:
+    from services.db_service import write_trace
+
+    prompt_chars = len(prompt)
+    logger.info(
+        "AI request  model=%s  prompt_chars=%d  max_tokens=%d",
+        settings.anthropic_model,
+        prompt_chars,
+        num_ctx,
+    )
+    await write_trace(
+        direction="server->ai",
+        operation=settings.anthropic_model,
+        prompt_chars=prompt_chars,
+    )
+
+    t0 = time.monotonic()
     message = await _client.messages.create(
         model=settings.anthropic_model,
         max_tokens=num_ctx,
         messages=[{"role": "user", "content": prompt}],
     )
-    return next((b.text for b in message.content if b.type == "text"), "No response received from model.")
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+
+    reply = next((b.text for b in message.content if b.type == "text"), "No response received from model.")
+    input_tokens = message.usage.input_tokens if message.usage else None
+    output_tokens = message.usage.output_tokens if message.usage else None
+
+    logger.info(
+        "AI response  chars=%d  input_tokens=%s  output_tokens=%s  elapsed=%dms",
+        len(reply),
+        input_tokens,
+        output_tokens,
+        elapsed_ms,
+    )
+    await write_trace(
+        direction="ai->server",
+        operation=settings.anthropic_model,
+        response_chars=len(reply),
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        elapsed_ms=elapsed_ms,
+    )
+
+    return reply
 
 
 async def _stream_generate(prompt: str, num_ctx: int = 4096) -> AsyncGenerator[str, None]:
+    from services.db_service import write_trace
+
+    prompt_chars = len(prompt)
+    logger.info(
+        "AI stream request  model=%s  prompt_chars=%d  max_tokens=%d",
+        settings.anthropic_model,
+        prompt_chars,
+        num_ctx,
+    )
+    await write_trace(
+        direction="server->ai",
+        operation=settings.anthropic_model,
+        prompt_chars=prompt_chars,
+    )
+
+    t0 = time.monotonic()
+    collected_chars = 0
     async with _client.messages.stream(
         model=settings.anthropic_model,
         max_tokens=num_ctx,
         messages=[{"role": "user", "content": prompt}],
     ) as stream:
         async for text in stream.text_stream:
+            collected_chars += len(text)
             yield text
+
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    logger.info(
+        "AI stream complete  chars=%d  elapsed=%dms",
+        collected_chars,
+        elapsed_ms,
+    )
+    await write_trace(
+        direction="ai->server",
+        operation=settings.anthropic_model,
+        response_chars=collected_chars,
+        elapsed_ms=elapsed_ms,
+    )
 
 
 # ── Public API — legacy (analyze / security) ─────────────────────────────────
