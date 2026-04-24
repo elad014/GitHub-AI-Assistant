@@ -266,7 +266,6 @@ body {
   padding: 0.65rem 1rem;
   font-size: 0.9rem;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -274,6 +273,7 @@ body {
   background: var(--user-bubble);
   color: #fff;
   border-bottom-right-radius: 3px;
+  white-space: pre-wrap;
 }
 
 .message.assistant .message-bubble {
@@ -281,6 +281,99 @@ body {
   border: 1px solid var(--border);
   color: var(--text);
   border-bottom-left-radius: 3px;
+}
+
+/* ── Shared markdown renderer (.md wrapper) ── */
+.md > :first-child { margin-top: 0; }
+.md > :last-child  { margin-bottom: 0; }
+
+.md p { margin: 0 0 0.6rem; }
+
+.md h1, .md h2, .md h3, .md h4 {
+  margin: 1rem 0 0.4rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+.md h1 { font-size: 1.15rem; }
+.md h2 { font-size: 1.05rem; }
+.md h3 { font-size: 0.95rem; }
+
+.md ul, .md ol {
+  margin: 0.4rem 0 0.6rem 1.4rem;
+  padding: 0;
+}
+.md li { margin-bottom: 0.2rem; }
+
+.md code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+}
+
+.md pre {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+.md pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: #e6edf3;
+}
+
+.md blockquote {
+  border-left: 3px solid var(--border);
+  margin: 0.5rem 0;
+  padding: 0.2rem 0.8rem;
+  color: var(--text-muted);
+}
+
+.md table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
+}
+.md th, .md td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.7rem;
+  text-align: left;
+}
+.md th {
+  background: rgba(255,255,255,0.05);
+  font-weight: 600;
+}
+
+.md a { color: var(--accent); text-decoration: underline; }
+
+.md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.75rem 0;
+}
+
+/* ── Thinking animation ── */
+.thinking-dots { color: var(--text-muted); font-style: italic; }
+.thinking-dots-trail {
+  display: inline-block;
+  width: 1.6ch;
+  text-align: left;
+}
+
+/* ── Analyze loading indicator ── */
+.analyze-loading {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.95rem;
 }
 
 .message-role {

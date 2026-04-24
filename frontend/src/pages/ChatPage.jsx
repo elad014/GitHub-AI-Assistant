@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import ThinkingDots from '../components/ThinkingDots'
 import { streamChatMessage } from '../api/client'
 
-export default function ChatPage() {
-  const [repoUrl, setRepoUrl] = useState('')
-  const [userName, setUserName] = useState('')
-  const [activeRepo, setActiveRepo] = useState('')
-  const [messages, setMessages] = useState([])
+export default function ChatPage({
+  repoUrl, setRepoUrl,
+  userName, setUserName,
+  activeRepo, setActiveRepo,
+  messages, setMessages,
+}) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -30,8 +34,7 @@ export default function ChatPage() {
     if (!text || !activeRepo || loading) return
 
     const historySnapshot = messages
-    const userMsg = { role: 'user', content: text }
-    const withUser = [...messages, userMsg]
+    const withUser = [...messages, { role: 'user', content: text }]
     setMessages([...withUser, { role: 'assistant', content: '' }])
     setInput('')
     setError('')
@@ -106,7 +109,13 @@ export default function ChatPage() {
               {msg.role === 'user' ? 'You' : 'Assistant'}
             </span>
             <div className="message-bubble">
-              {msg.content || (loading && i === messages.length - 1 ? 'Thinking...' : '')}
+              {msg.role === 'assistant' ? (
+                msg.content === '' && loading && i === messages.length - 1
+                  ? <ThinkingDots label="Thinking" />
+                  : <div className="md"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}
