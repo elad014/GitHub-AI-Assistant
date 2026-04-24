@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
 import { analyzeRepo } from '../api/client'
+import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
 
 export default function AnalyzePage() {
   const [repoUrl, setRepoUrl] = useState('')
@@ -14,6 +15,10 @@ export default function AnalyzePage() {
     e.preventDefault()
     const trimmed = repoUrl.trim()
     if (!trimmed || loading) return
+    if (!isValidGitHubUrl(trimmed)) {
+      setError('Please enter a valid GitHub repository URL, e.g. https://github.com/owner/repo')
+      return
+    }
 
     setLoading(true)
     setError('')
