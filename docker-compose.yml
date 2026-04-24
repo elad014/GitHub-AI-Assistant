@@ -60,7 +60,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:10000"
+      - "10000:3000"
     depends_on:
       backend:
         condition: service_healthy
