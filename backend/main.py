@@ -7,15 +7,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from middleware.tracing import TracingMiddleware
 from routers import analyze, analytics, chat, health, query, security
 from services.db_service import close_db, init_db
+from trace_context import RequestIDFilter
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    format="%(asctime)s  %(levelname)-8s  [req=%(request_id)s]  %(name)s  %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logging.getLogger("services.github_service").setLevel(logging.DEBUG)
+logging.getLogger().addFilter(RequestIDFilter())
 
 
 @asynccontextmanager
@@ -31,6 +34,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(TracingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
