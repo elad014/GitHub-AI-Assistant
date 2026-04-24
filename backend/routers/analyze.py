@@ -32,6 +32,7 @@ async def _run_analysis(request: AnalyzeRequest) -> AnalyzeResponse:
     await log_event(
         event_type="analyze",
         repo_url=repo_url_str,
+        user_message="Analyze",
         ai_response=summary,
         model_name=settings.anthropic_model,
     )
