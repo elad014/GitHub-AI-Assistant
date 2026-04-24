@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: github-ai-backend
+    name: github-ai-assistant
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    healthCheckPath: /api/health
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
@@ -19,17 +20,3 @@ services:
         value: ai-events
       - key: CHAT_HISTORY_SIZE
         value: "10"
-
-  - type: web
-    name: github-ai-frontend
-    runtime: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    rootDir: frontend
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
-        sync: false
