@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -246,6 +247,157 @@ async def stream_agentic_chat(
     logger.debug("[Agent] Streaming final answer after tool calls")
     async for token in _stream_generate(base_prompt + accumulated, num_ctx=8192):
         yield {"token": token}
+
+
+_STRUCTURED_SECURITY_TEMPLATE = """\
+You are a security-focused code reviewer. Analyze the repository for security vulnerabilities \
+using ONLY the context below.
+
+--- Repository Context ---
+{context}
+--- End Context ---
+
+{focus_section}
+Return findings as a JSON array. Each element must have exactly these fields:
+  "severity": "HIGH", "MEDIUM", or "LOW"
+  "file_path": the relevant file path string, or null
+  "title": short issue title (10 words or fewer)
+  "description": clear explanation of the issue
+  "recommendation": concrete fix
+
+Return ONLY valid JSON — no markdown, no prose, no code fences:
+[
+  {{"severity": "HIGH", "file_path": "path/to/file.py", "title": "...", "description": "...", "recommendation": "..."}}
+]
+
+If no issues are found, return: []"""
+
+_STRUCTURED_TECHNICAL_TEMPLATE = """\
+You are a senior software engineer performing a technical code review. Find bugs, logic errors, \
+and code quality issues using ONLY the context below.
+
+--- Repository Context ---
+{context}
+--- End Context ---
+
+{focus_section}
+Return findings as a JSON array. Each element must have exactly these fields:
+  "severity": "HIGH" (crash or data-loss bug), "MEDIUM" (logic error or bad practice), or "LOW" (minor issue)
+  "file_path": the relevant file path string, or null
+  "title": short issue title (10 words or fewer)
+  "description": clear explanation of the issue
+  "recommendation": concrete fix
+
+Return ONLY valid JSON — no markdown, no prose, no code fences:
+[
+  {{"severity": "MEDIUM", "file_path": "path/to/file.py", "title": "...", "description": "...", "recommendation": "..."}}
+]
+
+If no issues are found, return: []"""
+
+_COMPARE_TEMPLATE = """\
+You are a senior software architect assessing whether two repositories are a good technical fit.
+
+--- Repository A: {name_a} ---
+{context_a}
+--- End Repository A ---
+
+--- Repository B: {name_b} ---
+{context_b}
+--- End Repository B ---
+
+{goals_section}
+Return a JSON object with exactly these fields:
+  "verdict": one clear sentence on overall fit between the two projects
+  "sections": array of objects, each with "title" (string) and "content" (string), covering:
+    1. Language & Stack Compatibility
+    2. Architecture Fit
+    3. Dependency & Integration Risk
+    4. Maturity & Activity
+    5. Recommendation
+
+Return ONLY valid JSON — no markdown, no prose, no code fences:
+{{"verdict": "...", "sections": [{{"title": "...", "content": "..."}}]}}"""
+
+
+# ── JSON extraction helper ────────────────────────────────────────────────────
+
+def _extract_json(text: str):
+    """Extract the first JSON array or object from an LLM response."""
+    stripped = text.strip()
+    try:
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        pass
+    # Strip markdown code fences
+    fence = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", stripped)
+    if fence:
+        try:
+            return json.loads(fence.group(1))
+        except json.JSONDecodeError:
+            pass
+    # Try extracting first JSON array or object
+    for pattern in (r"(\[[\s\S]*\])", r"(\{[\s\S]*\})"):
+        m = re.search(pattern, stripped)
+        if m:
+            try:
+                return json.loads(m.group(1))
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
+# ── Public API — structured review + compare ─────────────────────────────────
+
+async def scan_security_structured(context: str, focus: str = "") -> list[dict]:
+    focus_section = f"Focus area: {focus}\n" if focus else ""
+    raw = await _generate(
+        _STRUCTURED_SECURITY_TEMPLATE.format(context=context, focus_section=focus_section),
+        num_ctx=4096,
+    )
+    result = _extract_json(raw)
+    if isinstance(result, list):
+        return result
+    logger.warning("[Ollama] security_structured: could not parse JSON, raw=%r", raw[:300])
+    return []
+
+
+async def review_technical_structured(context: str, focus: str = "") -> list[dict]:
+    focus_section = f"Focus area: {focus}\n" if focus else ""
+    raw = await _generate(
+        _STRUCTURED_TECHNICAL_TEMPLATE.format(context=context, focus_section=focus_section),
+        num_ctx=4096,
+    )
+    result = _extract_json(raw)
+    if isinstance(result, list):
+        return result
+    logger.warning("[Ollama] technical_structured: could not parse JSON, raw=%r", raw[:300])
+    return []
+
+
+async def compare_repos_llm(
+    context_a: str,
+    context_b: str,
+    name_a: str,
+    name_b: str,
+    goals: str = "",
+) -> dict:
+    goals_section = f"Comparison goals: {goals}\n" if goals else ""
+    raw = await _generate(
+        _COMPARE_TEMPLATE.format(
+            context_a=context_a,
+            context_b=context_b,
+            name_a=name_a,
+            name_b=name_b,
+            goals_section=goals_section,
+        ),
+        num_ctx=8192,
+    )
+    result = _extract_json(raw)
+    if isinstance(result, dict) and "verdict" in result:
+        return result
+    logger.warning("[Ollama] compare_repos: could not parse JSON, raw=%r", raw[:300])
+    return {"verdict": raw[:500], "sections": []}
 
 
 async def check_connection() -> bool:

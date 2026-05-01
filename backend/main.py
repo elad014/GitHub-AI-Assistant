@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from routers import analyze, analytics, chat, health, query, security
+from routers import analyze, analytics, chat, compare, health, overview, query, review, security
 from services.db_service import close_db, init_db
 
 logging.basicConfig(
@@ -44,6 +44,9 @@ app.include_router(analyze.router,    prefix="/api")
 app.include_router(security.router,   prefix="/api")
 app.include_router(analytics.router,  prefix="/api")
 app.include_router(query.router,      prefix="/api")
+app.include_router(overview.router,   prefix="/api")
+app.include_router(review.router,     prefix="/api")
+app.include_router(compare.router,    prefix="/api")
 
 _frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
 if _frontend_dist.is_dir():

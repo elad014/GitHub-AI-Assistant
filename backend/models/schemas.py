@@ -90,6 +90,34 @@ class AnalyzeCodeResponse(BaseModel):
     timestamp: datetime
 
 
+# ── Repo history ─────────────────────────────────────────────────────────────
+
+class RepoHistoryEntry(BaseModel):
+    id: int
+    event_type: str
+    user_name: str | None
+    user_message: str | None
+    ai_response: str
+    model_name: str
+    created_at: datetime
+
+
+class RepoHistoryResponse(BaseModel):
+    repo_url: str
+    entries: list[RepoHistoryEntry]
+    total: int
+
+
+class KnownRepo(BaseModel):
+    repo_url: str
+    event_count: int
+    last_activity: datetime
+
+
+class KnownReposResponse(BaseModel):
+    repos: list[KnownRepo]
+
+
 # ── Analytics ─────────────────────────────────────────────────────────────────
 
 class EventCount(BaseModel):
@@ -109,6 +137,83 @@ class AnalyticsResponse(BaseModel):
     security_scans: int
     high_severity_findings: int
     period_days: int
+
+
+# ── Repo overview ────────────────────────────────────────────────────────────
+
+class RepoOverviewRequest(BaseModel):
+    repo_url: HttpUrl
+
+
+class RepoOverviewResponse(BaseModel):
+    repo_url: str
+    name: str
+    description: str | None
+    language: str | None
+    stars: int
+    owner_avatar_url: str | None = None
+    opengraph_image_url: str | None = None
+    file_count: int
+    key_files: list[str]
+    paths: list[str]
+    readme_excerpt: str | None
+
+
+# ── Code review (security + technical) ───────────────────────────────────────
+
+class ReviewFinding(BaseModel):
+    severity: str
+    file_path: str | None = None
+    title: str
+    description: str
+    recommendation: str
+    line_start: int | None = None
+    line_end: int | None = None
+
+    model_config = {"extra": "ignore"}
+
+
+class CodeReviewRequest(BaseModel):
+    repo_url: HttpUrl
+    focus: str = ""
+
+
+class CodeReviewResponse(BaseModel):
+    repo_url: str
+    name: str
+    review_type: str
+    findings: list[ReviewFinding]
+    finding_count: int
+    has_high_severity: bool
+    timestamp: datetime
+
+
+# ── Repo comparison ───────────────────────────────────────────────────────────
+
+class CompareSection(BaseModel):
+    title: str
+    content: str
+
+
+class RepoMetaSummary(BaseModel):
+    name: str
+    description: str | None
+    language: str | None
+    stars: int
+
+
+class CompareReposRequest(BaseModel):
+    repo_a_url: HttpUrl
+    repo_b_url: HttpUrl
+    comparison_goals: str = ""
+
+
+class CompareReposResponse(BaseModel):
+    repo_a: RepoMetaSummary
+    repo_b: RepoMetaSummary
+    verdict: str
+    sections: list[CompareSection]
+    timestamp: datetime
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
