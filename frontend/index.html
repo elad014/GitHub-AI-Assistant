@@ -3,7 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Force no-cache at the document level (belt-and-suspenders with Nginx) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <title>GitHub AI Assistant</title>
+
+    <script>
+      // Detect bfcache (back/forward cache) restoration — Brave/Chrome keep a fully
+      // rendered copy of the page in memory and skip re-running JS on navigation.
+      // When that happens we force a full reload so the latest bundle is used.
+      window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+          window.location.reload();
+        }
+      });
+
+      // Also nuke any leftover ServiceWorker + CacheStorage from earlier builds.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (reg) { reg.unregister(); });
+        }).catch(function () {});
+      }
+      if ('caches' in window) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { caches.delete(k); });
+        }).catch(function () {});
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -2,26 +2,49 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
+import { githubRepoWebUrl } from '../utils/githubRepoUrl'
 import { getRepoOverview, streamChatMessage } from '../api/client'
 import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
+
+function sameRepoUrl(a, b) {
+  if (!a || !b) return false
+  return String(a).replace(/\/$/, '') === String(b).replace(/\/$/, '')
+}
 
 export default function ChatPage({
   repoUrl, setRepoUrl,
   userName, setUserName,
   activeRepo, setActiveRepo,
   messages, setMessages,
+  chatRepoOverview,
+  setChatRepoOverview,
 }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [repoOverview, setRepoOverview] = useState(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  async function loadRepo(e) {
+  // Restore banner when returning to Chat: fetch overview whenever activeRepo has no matching overview
+  useEffect(() => {
+    if (!activeRepo?.trim()) {
+      setChatRepoOverview(null)
+      return
+    }
+    const u = activeRepo.trim()
+    if (chatRepoOverview && sameRepoUrl(chatRepoOverview.repo_url, u)) return
+
+    let cancelled = false
+    getRepoOverview(u)
+      .then(ov => { if (!cancelled) setChatRepoOverview(ov) })
+      .catch(() => { if (!cancelled) setChatRepoOverview(null) })
+    return () => { cancelled = true }
+  }, [activeRepo, chatRepoOverview, setChatRepoOverview])
+
+  function loadRepo(e) {
     e.preventDefault()
     if (!userName.trim()) {
       setError('Please enter your name before loading a repository.')
@@ -36,13 +59,7 @@ export default function ChatPage({
     setActiveRepo(trimmed)
     setMessages([])
     setError('')
-    setRepoOverview(null)
-    try {
-      const ov = await getRepoOverview(trimmed)
-      setRepoOverview(ov)
-    } catch {
-      // Non-critical
-    }
+    setChatRepoOverview(null)
   }
 
   async function handleSend(e) {
@@ -107,15 +124,23 @@ export default function ChatPage({
 
       {activeRepo && (
         <div className="chat-repo-banner">
-          {repoOverview?.opengraph_image_url && (
-            <img className="chat-repo-banner-img" src={repoOverview.opengraph_image_url} alt="" loading="lazy" />
+          {chatRepoOverview?.opengraph_image_url && (
+            <img className="chat-repo-banner-img" src={chatRepoOverview.opengraph_image_url} alt="" loading="lazy" />
           )}
           <div className="chat-repo-banner-meta">
             <p className="status-text">
-              Repository: {repoOverview?.name ?? activeRepo}
+              Repository:{' '}
+              <a
+                className="chat-repo-link"
+                href={githubRepoWebUrl(chatRepoOverview?.repo_url ?? activeRepo)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {chatRepoOverview?.name ?? activeRepo}
+              </a>
             </p>
-            {repoOverview?.description && (
-              <p className="chat-repo-desc">{repoOverview.description}</p>
+            {chatRepoOverview?.description && (
+              <p className="chat-repo-desc">{chatRepoOverview.description}</p>
             )}
           </div>
         </div>
