@@ -36,6 +36,8 @@ class RepoInfo:
     file_paths: list[str]
     key_files: list[str]
     readme: str
+    owner_avatar_url: str | None = None
+    opengraph_image_url: str | None = None
     file_contents: dict[str, str] = field(default_factory=dict)
 
 
@@ -161,6 +163,8 @@ async def fetch_repo_info(repo_url: str) -> RepoInfo:
         description=meta.get("description"),
         language=meta.get("language"),
         stars=meta.get("stargazers_count", 0),
+        owner_avatar_url=(meta.get("owner") or {}).get("avatar_url"),
+        opengraph_image_url=f"https://opengraph.githubassets.com/1/{owner}/{repo}",
         all_paths=all_paths,
         file_paths=file_paths,
         key_files=key_files,
@@ -233,6 +237,8 @@ async def fetch_repo_overview(repo_url: str) -> RepoInfo:
         description=meta.get("description"),
         language=meta.get("language"),
         stars=meta.get("stargazers_count", 0),
+        owner_avatar_url=(meta.get("owner") or {}).get("avatar_url"),
+        opengraph_image_url=f"https://opengraph.githubassets.com/1/{owner}/{repo}",
         all_paths=all_paths,
         file_paths=file_paths,
         key_files=key_files,

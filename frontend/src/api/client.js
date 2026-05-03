@@ -67,8 +67,32 @@ export function analyzeCode(repoUrl, filePath) {
   return post('/analyze-code', { repo_url: repoUrl, file_path: filePath })
 }
 
+export function getRepoOverview(repoUrl) {
+  return post('/repo-overview', { repo_url: repoUrl })
+}
+
+export function reviewSecurity(repoUrl, focus = '') {
+  return post('/review/security', { repo_url: repoUrl, focus })
+}
+
+export function reviewTechnical(repoUrl, focus = '') {
+  return post('/review/technical', { repo_url: repoUrl, focus })
+}
+
+export function compareRepos(repoAUrl, repoBUrl, goals = '') {
+  return post('/compare-repos', { repo_a_url: repoAUrl, repo_b_url: repoBUrl, comparison_goals: goals })
+}
+
 export function getAnalytics(periodDays = 30) {
   return get(`/analytics?period_days=${periodDays}`)
+}
+
+export function getKnownRepos(limit = 50) {
+  return get(`/known-repos?limit=${limit}`)
+}
+
+export function getRepoHistory(repoUrl, limit = 100) {
+  return get(`/repo-history?repo_url=${encodeURIComponent(repoUrl)}&limit=${limit}`)
 }
 
 export async function checkHealth() {

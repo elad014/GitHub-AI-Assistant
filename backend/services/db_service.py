@@ -237,6 +237,45 @@ async def save_interaction(repo_url: str, question: str, answer: str) -> None:
         )
 
 
+async def get_known_repos(limit: int = 50) -> list[dict]:
+    """Return distinct repos ordered by most recent activity."""
+    if _pool is None:
+        return []
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT repo_url,
+                   COUNT(*) AS event_count,
+                   MAX(created_at) AS last_activity
+            FROM chat_logs
+            GROUP BY repo_url
+            ORDER BY last_activity DESC
+            LIMIT $1
+            """,
+            limit,
+        )
+    return [dict(r) for r in rows]
+
+
+async def get_repo_history(repo_url: str, limit: int = 100) -> list[dict]:
+    """Return chronological events for a repo (newest first)."""
+    if _pool is None:
+        return []
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, event_type, user_name, user_message, ai_response, model_name, created_at
+            FROM chat_logs
+            WHERE repo_url = $1
+            ORDER BY created_at DESC
+            LIMIT $2
+            """,
+            repo_url,
+            limit,
+        )
+    return [dict(r) for r in rows]
+
+
 async def check_connection() -> bool:
     if _pool is None:
         return False

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
-import { streamChatMessage } from '../api/client'
+import { getRepoOverview, streamChatMessage } from '../api/client'
 import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
 
 export default function ChatPage({
@@ -14,13 +14,14 @@ export default function ChatPage({
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [repoOverview, setRepoOverview] = useState(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  function loadRepo(e) {
+  async function loadRepo(e) {
     e.preventDefault()
     if (!userName.trim()) {
       setError('Please enter your name before loading a repository.')
@@ -35,6 +36,13 @@ export default function ChatPage({
     setActiveRepo(trimmed)
     setMessages([])
     setError('')
+    setRepoOverview(null)
+    try {
+      const ov = await getRepoOverview(trimmed)
+      setRepoOverview(ov)
+    } catch {
+      // Non-critical
+    }
   }
 
   async function handleSend(e) {
@@ -98,9 +106,19 @@ export default function ChatPage({
       </form>
 
       {activeRepo && (
-        <p className="status-text">
-          Repository: {activeRepo}
-        </p>
+        <div className="chat-repo-banner">
+          {repoOverview?.opengraph_image_url && (
+            <img className="chat-repo-banner-img" src={repoOverview.opengraph_image_url} alt="" loading="lazy" />
+          )}
+          <div className="chat-repo-banner-meta">
+            <p className="status-text">
+              Repository: {repoOverview?.name ?? activeRepo}
+            </p>
+            {repoOverview?.description && (
+              <p className="chat-repo-desc">{repoOverview.description}</p>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="chat-window">
