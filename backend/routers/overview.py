@@ -5,6 +5,20 @@ from services.github_service import fetch_repo_overview
 
 router = APIRouter()
 
+# Full README payloads are heavy; keep excerpt bounded but avoid mid-word cuts from a tiny slice.
+_README_EXCERPT_MAX = 8000
+
+
+def _readme_excerpt(readme: str) -> str:
+    if len(readme) <= _README_EXCERPT_MAX:
+        return readme
+    chunk = readme[:_README_EXCERPT_MAX]
+    for sep in ("\n\n", "\n", " "):
+        cut = chunk.rfind(sep)
+        if cut > int(_README_EXCERPT_MAX * 0.55):
+            return readme[:cut].rstrip()
+    return chunk.rstrip()
+
 
 @router.post("/repo-overview", response_model=RepoOverviewResponse)
 async def repo_overview(request: RepoOverviewRequest) -> RepoOverviewResponse:
@@ -24,5 +38,5 @@ async def repo_overview(request: RepoOverviewRequest) -> RepoOverviewResponse:
         file_count=len(info.file_paths),
         key_files=info.key_files,
         paths=info.all_paths,
-        readme_excerpt=info.readme[:500] if info.readme else None,
+        readme_excerpt=_readme_excerpt(info.readme) if info.readme else None,
     )

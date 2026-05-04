@@ -1,16 +1,8 @@
-import { useState } from 'react'
 import ThinkingDots from '../components/ThinkingDots'
 import FileTree from '../components/FileTree'
 import FindingsPanel from '../components/FindingsPanel'
 import RepoOverviewCard from '../components/RepoOverviewCard'
-import {
-  analyzeRepo,
-  compareRepos,
-  getRepoOverview,
-  reviewSecurity,
-  reviewTechnical,
-} from '../api/client'
-import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
+import { githubRepoSlug, githubRepoWebUrl } from '../utils/githubRepoUrl'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -18,117 +10,39 @@ const TABS = [
   { id: 'review',   label: 'Review'  },
 ]
 
-export default function AnalyzePage() {
-  const [repoUrl, setRepoUrl]               = useState('')
-  const [overview, setOverview]             = useState(null)
-  const [summary, setSummary]               = useState(null)
-  const [loadingOverview, setLoadingOverview] = useState(false)
-  const [loadingSummary, setLoadingSummary]   = useState(false)
-  const [overviewError, setOverviewError]   = useState('')
-  const [activeTab, setActiveTab]           = useState('overview')
-
-  // Compare state
-  const [compareUrl, setCompareUrl]         = useState('')
-  const [compareGoals, setCompareGoals]     = useState('')
-  const [compareResult, setCompareResult]   = useState(null)
-  const [loadingCompare, setLoadingCompare] = useState(false)
-  const [compareError, setCompareError]     = useState('')
-
-  // Review state
-  const [reviewType, setReviewType]         = useState('security')
-  const [reviewResults, setReviewResults]   = useState({ security: null, technical: null })
-  const [loadingReview, setLoadingReview]   = useState({ security: false, technical: false })
-  const [reviewErrors, setReviewErrors]     = useState({ security: '', technical: '' })
-  const [selectedFileByReview, setSelectedFileByReview] = useState({ security: null, technical: null })
-
-  // Shared file selection (tree ↔ findings panel)
-  const [selectedFile, setSelectedFile]     = useState(null)
-
-  async function handleLoad(e) {
-    e.preventDefault()
-    const url = repoUrl.trim()
-    if (!url || loadingOverview) return
-    if (!isValidGitHubUrl(url)) {
-      setOverviewError('Please enter a valid GitHub repository URL, e.g. https://github.com/owner/repo')
-      return
-    }
-
-    setLoadingOverview(true)
-    setOverviewError('')
-    setOverview(null)
-    setSummary(null)
-    setReviewResults({ security: null, technical: null })
-    setReviewErrors({ security: '', technical: '' })
-    setLoadingReview({ security: false, technical: false })
-    setSelectedFileByReview({ security: null, technical: null })
-    setCompareResult(null)
-    setSelectedFile(null)
-    setActiveTab('overview')
-
-    try {
-      const data = await getRepoOverview(url)
-      setOverview(data)
-      // Kick off AI summary in the background — doesn't block tree render
-      setLoadingSummary(true)
-      analyzeRepo(url)
-        .then(s => setSummary(s))
-        .catch(() => {})
-        .finally(() => setLoadingSummary(false))
-    } catch (err) {
-      setOverviewError(err.message)
-    } finally {
-      setLoadingOverview(false)
-    }
-  }
-
-  async function handleCompare(e) {
-    e.preventDefault()
-    const urlB = compareUrl.trim()
-    if (!urlB || loadingCompare) return
-
-    setLoadingCompare(true)
-    setCompareError('')
-    setCompareResult(null)
-
-    try {
-      const data = await compareRepos(repoUrl.trim(), urlB, compareGoals.trim())
-      setCompareResult(data)
-    } catch (err) {
-      setCompareError(err.message)
-    } finally {
-      setLoadingCompare(false)
-    }
-  }
-
-  async function handleReview() {
-    if (loadingReview[reviewType]) return
-    setLoadingReview(prev => ({ ...prev, [reviewType]: true }))
-    setReviewErrors(prev => ({ ...prev, [reviewType]: '' }))
-    setSelectedFileByReview(prev => ({ ...prev, [reviewType]: null }))
-
-    try {
-      const fn = reviewType === 'security' ? reviewSecurity : reviewTechnical
-      const data = await fn(repoUrl.trim())
-      setReviewResults(prev => ({ ...prev, [reviewType]: data }))
-    } catch (err) {
-      setReviewErrors(prev => ({ ...prev, [reviewType]: err.message }))
-    } finally {
-      setLoadingReview(prev => ({ ...prev, [reviewType]: false }))
-    }
-  }
-
-  const activeReviewResult = reviewResults[reviewType]
-  const findings = activeReviewResult?.findings ?? []
-  const activeReviewError = reviewErrors[reviewType]
-  const activeReviewLoading = loadingReview[reviewType]
-  const selectedReviewFile = selectedFileByReview[reviewType]
-  function setSelectedReviewFile(path) {
-    setSelectedFileByReview(prev => ({ ...prev, [reviewType]: path }))
-  }
-
+export default function AnalyzePage({
+  repoUrl,
+  setRepoUrl,
+  overview,
+  summary,
+  loadingOverview,
+  loadingSummary,
+  overviewError,
+  activeTab,
+  setActiveTab,
+  compareUrl,
+  setCompareUrl,
+  compareGoals,
+  setCompareGoals,
+  compareResult,
+  loadingCompare,
+  compareError,
+  reviewType,
+  setReviewType,
+  reviewResults,
+  selectedFile,
+  setSelectedFile,
+  handleLoad,
+  handleCompare,
+  handleReview,
+  findings,
+  activeReviewError,
+  activeReviewLoading,
+  selectedReviewFile,
+  setSelectedReviewFile,
+}) {
   return (
     <div className="analyze-page">
-      {/* ── URL bar ── */}
       <div className="analyze-url-bar">
         <form className="repo-bar" onSubmit={handleLoad}>
           <input
@@ -146,7 +60,6 @@ export default function AnalyzePage() {
         {overviewError && <div className="error-banner">{overviewError}</div>}
       </div>
 
-      {/* ── Tabs (only show after repo is loaded) ── */}
       {overview && (
         <>
           <div className="analyze-tabs">
@@ -165,8 +78,10 @@ export default function AnalyzePage() {
                     }
                     title={
                       reviewResults.security && reviewResults.technical
-                        ? `Security: ${reviewResults.security.finding_count}, Technical: ${reviewResults.technical.finding_count}`
-                        : (reviewResults.security ? `Security: ${reviewResults.security.finding_count}` : `Technical: ${reviewResults.technical.finding_count}`)
+                        ? `Security: ${reviewResults.security.finding_count}, Code quality: ${reviewResults.technical.finding_count}`
+                        : (reviewResults.security
+                          ? `Security: ${reviewResults.security.finding_count}`
+                          : `Code quality: ${reviewResults.technical.finding_count}`)
                     }
                   >
                     {(reviewResults.security?.finding_count ?? 0) + (reviewResults.technical?.finding_count ?? 0)}
@@ -176,7 +91,6 @@ export default function AnalyzePage() {
             ))}
           </div>
 
-          {/* ── Overview tab ── */}
           {activeTab === 'overview' && (
             <div className="analyze-tab-content">
               <RepoOverviewCard
@@ -195,21 +109,39 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* ── Compare tab ── */}
           {activeTab === 'compare' && (
             <div className="analyze-tab-content">
               <div className="compare-section">
+                <p className="compare-intro">
+                  See how another repository lines up with yours before you commit to adopting or forking it.
+                </p>
                 <div className="compare-repos-row">
                   <div className="compare-repo-chip">
                     <span className="compare-repo-label">Repo A</span>
-                    <code className="compare-repo-name">{overview.name}</code>
+                    <a
+                      className="compare-repo-name"
+                      href={githubRepoWebUrl(overview.repo_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {overview.name}
+                    </a>
                   </div>
                   <span className="compare-vs">vs</span>
                   <div className="compare-repo-chip compare-repo-chip--b">
                     <span className="compare-repo-label">Repo B</span>
-                    <span className="compare-repo-placeholder">
-                      {compareUrl || 'not set'}
-                    </span>
+                    {compareUrl ? (
+                      <a
+                        className="compare-repo-name"
+                        href={githubRepoWebUrl(compareUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {githubRepoSlug(compareUrl) || compareUrl}
+                      </a>
+                    ) : (
+                      <span className="compare-repo-placeholder">not set</span>
+                    )}
                   </div>
                 </div>
 
@@ -225,10 +157,13 @@ export default function AnalyzePage() {
                   <input
                     className="input-url compare-goals-input"
                     type="text"
-                    placeholder="Optional: describe your integration goals…"
+                    placeholder="e.g. I need a small logging library to embed in my CLI"
                     value={compareGoals}
                     onChange={e => setCompareGoals(e.target.value)}
                   />
+                  <p className="compare-goals-hint">
+                    Optional context helps the model focus—mention constraints (language, size, license, runtime).
+                  </p>
                   <button className="btn" type="submit" disabled={loadingCompare}>
                     {loadingCompare ? <ThinkingDots label="Comparing" /> : 'Compare'}
                   </button>
@@ -251,7 +186,14 @@ export default function AnalyzePage() {
                     <div className="compare-repo-metas">
                       {[compareResult.repo_a, compareResult.repo_b].map((r, i) => (
                         <div key={i} className="compare-repo-meta-card">
-                          <span className="compare-repo-meta-name">{r.name}</span>
+                          <a
+                            className="compare-repo-meta-name"
+                            href={githubRepoWebUrl(r.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {r.name}
+                          </a>
                           <div className="compare-repo-meta-row">
                             {r.language && <span className="overview-badge overview-badge--lang">{r.language}</span>}
                             <span className="overview-meta-item">★ {r.stars.toLocaleString()}</span>
@@ -274,32 +216,46 @@ export default function AnalyzePage() {
             </div>
           )}
 
-          {/* ── Review tab ── */}
           {activeTab === 'review' && (
             <div className="analyze-tab-content analyze-review-content">
+              <p className="review-intro">
+                {reviewType === 'security' ? (
+                  <>
+                    <strong>Security</strong> looks for vulnerabilities and unsafe patterns based on the code we can see in context.
+                  </>
+                ) : (
+                  <>
+                    <strong>Code quality</strong> looks for bugs, brittle logic, error-handling gaps, and maintainability issues - not security claims.
+                  </>
+                )}
+              </p>
               <div className="review-controls">
                 <div className="review-type-toggle">
                   <button
+                    type="button"
                     className={`review-toggle-btn${reviewType === 'security' ? ' review-toggle-btn--active' : ''}`}
                     onClick={() => setReviewType('security')}
                   >
                     Security
                   </button>
                   <button
+                    type="button"
                     className={`review-toggle-btn${reviewType === 'technical' ? ' review-toggle-btn--active' : ''}`}
                     onClick={() => setReviewType('technical')}
+                    title="Bugs, logic, and maintainability"
                   >
-                    Technical
+                    Code quality
                   </button>
                 </div>
                 <button
+                  type="button"
                   className="btn"
                   onClick={handleReview}
                   disabled={activeReviewLoading}
                 >
                   {activeReviewLoading
                     ? <ThinkingDots label={reviewType === 'security' ? 'Scanning' : 'Reviewing'} />
-                    : `Run ${reviewType === 'security' ? 'Security Scan' : 'Technical Review'}`}
+                    : (reviewType === 'security' ? 'Run security scan' : 'Run code quality review')}
                 </button>
               </div>
 
@@ -307,11 +263,11 @@ export default function AnalyzePage() {
 
               {activeReviewLoading && (
                 <div className="analyze-loading">
-                  <ThinkingDots label={reviewType === 'security' ? 'Scanning for security issues' : 'Reviewing for technical bugs'} />
+                  <ThinkingDots label={reviewType === 'security' ? 'Scanning for security issues' : 'Reviewing for bugs and code quality'} />
                 </div>
               )}
 
-              {activeReviewResult && (
+              {reviewResults[reviewType] && (
                 <div className="review-split">
                   <div className="review-tree-col">
                     <FileTree
@@ -335,12 +291,11 @@ export default function AnalyzePage() {
         </>
       )}
 
-      {/* ── Empty state ── */}
       {!overview && !loadingOverview && (
         <div className="analyze-empty">
           <p>Enter a GitHub repository URL and click <strong>Load</strong> to get started.</p>
           <p className="analyze-empty-sub">
-            Once loaded you can explore the file tree, compare it with another repo, or run a security / technical review.
+            Then explore the tree, compare against another repo, or run a security or code-quality review.
           </p>
         </div>
       )}

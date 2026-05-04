@@ -1,5 +1,86 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import GeneratingCycle from './GeneratingCycle'
+import { githubRepoWebUrl } from '../utils/githubRepoUrl'
+import { readmeExcerptForMarkdown } from '../utils/readmeExcerptForMarkdown'
+
+/** ~5 lines of prose at root font size (matches `.overview-readme-md--collapsed` max-height). */
+const README_COLLAPSED_REM = 7.75
+
+function ReadmeExcerptBlock({ excerpt }) {
+  const mdRef = useRef(null)
+  const [expanded, setExpanded] = useState(false)
+  const [needsToggle, setNeedsToggle] = useState(false)
+
+  useLayoutEffect(() => {
+    setExpanded(false)
+  }, [excerpt])
+
+  useLayoutEffect(() => {
+    const el = mdRef.current
+    if (!el || !excerpt) {
+      setNeedsToggle(false)
+      return
+    }
+    const measure = () => {
+      const rootRem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      const maxPx = README_COLLAPSED_REM * rootRem
+      setNeedsToggle(el.scrollHeight > maxPx + 10)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [excerpt])
+
+  const collapsed = needsToggle && !expanded
+
+  return (
+    <div className="overview-readme">
+      <span className="overview-section-label">README (excerpt)</span>
+      <div
+        className={
+          'overview-readme-shell' +
+          (needsToggle ? ' overview-readme-shell--interactive' : '') +
+          (collapsed ? ' overview-readme-shell--collapsed' : '')
+        }
+        role={needsToggle ? 'button' : undefined}
+        tabIndex={needsToggle ? 0 : undefined}
+        aria-expanded={needsToggle ? expanded : undefined}
+        onClick={e => {
+          if (!needsToggle) return
+          if (e.target.closest('a, button')) return
+          setExpanded(v => !v)
+        }}
+        onKeyDown={e => {
+          if (!needsToggle) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setExpanded(x => !x)
+          }
+        }}
+      >
+        <div className="overview-readme-md-wrap">
+          <div
+            ref={mdRef}
+            className={'overview-readme-md md' + (collapsed ? ' overview-readme-md--collapsed' : '')}
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {readmeExcerptForMarkdown(excerpt)}
+            </ReactMarkdown>
+          </div>
+          {collapsed && <div className="overview-readme-fade" aria-hidden />}
+        </div>
+        {needsToggle && (
+          <span className="overview-readme-toggle-hint">
+            {expanded ? 'Click to collapse' : 'Click to show full excerpt'}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function RepoOverviewCard({ overview, summary, loadingSummary }) {
   return (
@@ -19,7 +100,7 @@ export default function RepoOverviewCard({ overview, summary, loadingSummary }) 
         <div className="overview-card-title">
           <a
             className="overview-repo-name"
-            href={overview.repo_url}
+            href={githubRepoWebUrl(overview.repo_url)}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -40,12 +121,7 @@ export default function RepoOverviewCard({ overview, summary, loadingSummary }) 
       )}
 
       {overview.readme_excerpt && (
-        <div className="overview-readme">
-          <span className="overview-section-label">README (excerpt)</span>
-          <div className="overview-readme-md md">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{overview.readme_excerpt}</ReactMarkdown>
-          </div>
-        </div>
+        <ReadmeExcerptBlock excerpt={overview.readme_excerpt} />
       )}
 
       {overview.key_files.length > 0 && (
@@ -62,9 +138,7 @@ export default function RepoOverviewCard({ overview, summary, loadingSummary }) 
       <div className="overview-summary">
         <span className="overview-section-label">AI Summary</span>
         {loadingSummary ? (
-          <div className="overview-summary-loading">
-            <span className="thinking-dots">Generating summary<span className="thinking-dots-trail">…</span></span>
-          </div>
+          <GeneratingCycle />
         ) : summary ? (
           <div className="overview-summary-md md">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary.summary}</ReactMarkdown>
