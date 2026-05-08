@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import GeneratingCycle from './GeneratingCycle'
+import RepoBannerImage from './RepoBannerImage'
 import { githubRepoWebUrl } from '../utils/githubRepoUrl'
 import { readmeExcerptForMarkdown } from '../utils/readmeExcerptForMarkdown'
 
@@ -85,17 +86,13 @@ function ReadmeExcerptBlock({ excerpt }) {
 export default function RepoOverviewCard({ overview, summary, loadingSummary }) {
   return (
     <div className="overview-card">
-      {overview?.opengraph_image_url && (
-        <div className="overview-banner">
-          <img
-            className="overview-banner-img"
-            src={overview.opengraph_image_url}
-            alt=""
-            loading="lazy"
-          />
-          <div className="overview-banner-fade" />
-        </div>
-      )}
+      <RepoBannerImage
+        src={overview?.opengraph_image_url}
+        className="overview-banner-img"
+        wrapperClass="overview-banner"
+      >
+        <div className="overview-banner-fade" />
+      </RepoBannerImage>
       <div className="overview-card-header">
         <div className="overview-card-title">
           <a
