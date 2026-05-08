@@ -6,9 +6,24 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from routers import analyze, analytics, chat, compare, health, overview, query, review, security
 from services.db_service import close_db, init_db
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serves the built React app and falls back to index.html for unknown
+    paths so client-side routes (e.g. /chat, /analyze) work on hard-refresh
+    and direct navigation. API 404s are still surfaced as JSON."""
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or path.startswith("api/"):
+                raise
+            return await super().get_response("index.html", scope)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,4 +65,4 @@ app.include_router(compare.router,    prefix="/api")
 
 _frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
 if _frontend_dist.is_dir():
-    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="static")
+    app.mount("/", SPAStaticFiles(directory=str(_frontend_dist), html=True), name="static")

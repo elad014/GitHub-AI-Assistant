@@ -2,6 +2,11 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import GeneratingCycle from './GeneratingCycle'
+<<<<<<< Updated upstream
+=======
+import RepoBannerImage from './RepoBannerImage'
+import GitHubBannerFallback from './GitHubBannerFallback'
+>>>>>>> Stashed changes
 import { githubRepoWebUrl } from '../utils/githubRepoUrl'
 import { readmeExcerptForMarkdown } from '../utils/readmeExcerptForMarkdown'
 
@@ -85,6 +90,7 @@ function ReadmeExcerptBlock({ excerpt }) {
 export default function RepoOverviewCard({ overview, summary, loadingSummary }) {
   return (
     <div className="overview-card">
+<<<<<<< Updated upstream
       {overview?.opengraph_image_url && (
         <div className="overview-banner">
           <img
@@ -96,6 +102,16 @@ export default function RepoOverviewCard({ overview, summary, loadingSummary }) 
           <div className="overview-banner-fade" />
         </div>
       )}
+=======
+      <RepoBannerImage
+        src={overview?.opengraph_image_url}
+        className="overview-banner-img"
+        wrapperClass="overview-banner"
+        fallback={<GitHubBannerFallback />}
+      >
+        <div className="overview-banner-fade" />
+      </RepoBannerImage>
+>>>>>>> Stashed changes
       <div className="overview-card-header">
         <div className="overview-card-title">
           <a
