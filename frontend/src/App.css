@@ -1328,6 +1328,7 @@ body {
   cursor: pointer;
   overflow: hidden;
   transition: filter 0.1s;
+  flex-shrink: 0;
 }
 
 .finding-card--high   { border-left-color: var(--sev-high); }

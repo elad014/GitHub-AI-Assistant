@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Renders a GitHub Open Graph banner image, gracefully handling upstream
- * failures (404, 429 rate-limit from opengraph.githubassets.com, network
- * errors, etc.) so the UI doesn't show a broken-image icon.
+ * Renders a GitHub Open Graph banner image, gracefully hiding itself if the
+ * upstream host fails (404, 429 rate-limit from opengraph.githubassets.com,
+ * network errors, etc.) so the UI doesn't show a broken-image icon.
  *
- * Behavior when the image fails (or `src` is missing):
- *   - If `fallback` is provided, render the wrapper with the fallback inside.
- *   - Otherwise, render nothing.
- *
- * `wrapperClass` (and optional `children`) lets call sites also collapse a
- * wrapping element when the image fails and no fallback is given.
+ * Pass `wrapperClass` (and optional `children`) to also collapse a wrapping
+ * element when the image fails.
  */
 export default function RepoBannerImage({
   src,
