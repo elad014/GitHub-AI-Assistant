@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
+import RepoBannerImage from '../components/RepoBannerImage'
 import { githubRepoWebUrl } from '../utils/githubRepoUrl'
 import { getRepoOverview, streamChatMessage } from '../api/client'
 import { isValidGitHubUrl } from '../utils/validateGitHubUrl'
@@ -124,9 +125,10 @@ export default function ChatPage({
 
       {activeRepo && (
         <div className="chat-repo-banner">
-          {chatRepoOverview?.opengraph_image_url && (
-            <img className="chat-repo-banner-img" src={chatRepoOverview.opengraph_image_url} alt="" loading="lazy" />
-          )}
+          <RepoBannerImage
+            className="chat-repo-banner-img"
+            src={chatRepoOverview?.opengraph_image_url}
+          />
           <div className="chat-repo-banner-meta">
             <p className="status-text">
               Repository:{' '}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ThinkingDots from '../components/ThinkingDots'
+import RepoBannerImage from '../components/RepoBannerImage'
 
 // ── Demo repo ──────────────────────────────────────────────────────────────────
 
@@ -363,11 +364,9 @@ function DemoWindow() {
 
       {/* Repo banner (always visible) */}
       <div className="demo-repo-banner">
-        <img
+        <RepoBannerImage
           className="demo-repo-img"
           src={DEMO_OVERVIEW.opengraph_image_url}
-          alt=""
-          loading="lazy"
         />
         <div className="demo-repo-meta">
           <a
