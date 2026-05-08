@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from config import settings
 from models.schemas import CodeReviewRequest, CodeReviewResponse, ReviewFinding
-from services.db_service import log_event
+from services.db_service import log_event, log_security_scan
 from services.github_service import build_context, fetch_repo_info
 from services.ai_service import review_technical_structured, scan_security_structured
 
@@ -46,6 +46,16 @@ async def review_security(request: CodeReviewRequest) -> CodeReviewResponse:
         event_type="review_security",
         repo_url=str(request.repo_url),
         ai_response=json.dumps(raw),
+        model_name=settings.anthropic_model,
+    )
+
+    # Keep analytics counters (security_scans/high_severity_findings) accurate:
+    # those are aggregated from `security_findings`, not from `chat_logs`.
+    await log_security_scan(
+        repo_url=str(request.repo_url),
+        findings_raw=json.dumps(raw),
+        finding_count=len(findings),
+        has_high=has_high,
         model_name=settings.anthropic_model,
     )
 
